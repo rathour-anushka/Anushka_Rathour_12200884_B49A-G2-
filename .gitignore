@@ -1,0 +1,14 @@
+# Virtual environment
+venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# User uploads and database
+uploads/
+database.db
+
+# IDE and OS files
+.idea/
+.vscode/

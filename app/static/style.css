@@ -1,0 +1,20 @@
+/* Simple styles for modal and floating button */
+#modal {
+	z-index: 60;
+	display: none; /* toggled by JS to flex */
+}
+#modal.show {
+	display: flex;
+}
+
+#addBtn {
+	font-size: 28px;
+	line-height: 1;
+}
+
+/* ensure uploaded images in cards look nice */
+.item-image {
+	max-height: 160px;
+	object-fit: cover;
+}
+

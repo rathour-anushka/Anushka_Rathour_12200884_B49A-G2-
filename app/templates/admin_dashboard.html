@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 p-6">
+  <h1 class="text-3xl font-bold mb-6">Admin Dashboard</h1>
+  <div class="flex justify-end mb-4">
+  <a href="/logout" class="text-sm text-red-600 hover:underline">Logout</a>
+</div>
+
+  <div class="mb-4 flex space-x-4">
+    <button onclick="filterItems('All')" class="px-4 py-2 bg-gray-300 rounded">All</button>
+    <button onclick="filterItems('Lost')" class="px-4 py-2 bg-red-500 text-white rounded">Lost</button>
+    <button onclick="filterItems('Found')" class="px-4 py-2 bg-green-500 text-white rounded">Found</button>
+    <button onclick="filterItems('Resolved')" class="px-4 py-2 bg-blue-500 text-white rounded">Resolved</button>
+    <button onclick="filterItems('Yet to be found')" class="px-4 py-2 bg-yellow-500 text-white rounded">Yet to be found</button>
+  </div>
+
+  <script id="items-data" type="application/json">
+    {{ items | tojson }}
+  </script>
+
+  <div id="adminItems" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+
+  <script>
+    const allItems = JSON.parse(document.getElementById('items-data').textContent);
+
+    function render(items) {
+      const container = document.getElementById('adminItems');
+      container.innerHTML = '';
+      items.forEach(i => {
+        container.innerHTML += `
+          <div class="bg-white p-4 rounded shadow">
+            <h2 class="text-lg font-bold">${i.title}</h2>
+            <p>${i.description}</p>
+            <p><strong>Category:</strong> ${i.category}</p>
+            <p><strong>Status:</strong> ${i.status}</p>
+            <p><strong>Location:</strong> ${i.location}</p>
+            <p><strong>Phone:</strong> ${i.phone}</p>
+            ${i.image_path ? `<img src="/uploads/${i.image_path}" class="mt-2 rounded w-full">` : ''}
+            <div class="mt-3 flex space-x-2">
+              <button onclick="markResolved(${i.id})" class="px-3 py-1 bg-blue-500 text-white rounded">Mark Resolved</button>
+              <button onclick="deleteItem(${i.id})" class="px-3 py-1 bg-red-500 text-white rounded">Delete</button>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    function filterItems(type) {
+      if (type === 'All') return render(allItems);
+      render(allItems.filter(i => i.category === type || i.status === type));
+    }
+
+    async function markResolved(id) {
+      await fetch(`/mark-resolved/${id}`, { method: 'POST' });
+      location.reload();
+    }
+
+    async function deleteItem(id) {
+      if (confirm('Delete this item?')) {
+        await fetch(`/delete-item/${id}`, { method: 'DELETE' });
+        location.reload();
+      }
+    }
+
+    render(allItems);
+  </script>
+</body>
+</html>
