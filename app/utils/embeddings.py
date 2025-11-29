@@ -16,7 +16,7 @@ def get_embedding(text=None, image_data=None, title=None):
         image_data: Image bytes
         title: Item title (will be prepended to text if provided)
     """
-    # Combine title and text for better text matching
+    # Combine title and text for better text matching-
     if title and text:
         text = f"{title}. {text}"
     elif title and not text:
