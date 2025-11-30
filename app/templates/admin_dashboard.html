@@ -321,7 +321,15 @@
         const statusClass = itemStatus === 'Resolved' ? 'status-resolved' : 
                            itemStatus === 'Lost' ? 'status-lost' :
                            itemStatus === 'Found' ? 'status-found' : 'status-pending';
-        const imageSrc = item.image_path ? `/uploads/${item.image_path}` : '';
+        // image_path may already be a full URL starting with /uploads/ or just a filename
+        let imageSrc = '';
+        if (item.image_path) {
+          if (typeof item.image_path === 'string' && item.image_path.startsWith('/uploads')) {
+            imageSrc = item.image_path;
+          } else {
+            imageSrc = `/uploads/${item.image_path}`;
+          }
+        }
         container.innerHTML += `
           <div class="bg-white p-4 rounded shadow-md hover:shadow-lg transition">
             <div class="flex justify-between items-start mb-2">
@@ -388,9 +396,13 @@
     async function deleteItem(itemId) {
       if (!confirm('Delete this item permanently?')) return;
       try {
-        const response = await fetch(`/delete-item/${itemId}`, { method: 'DELETE' });
+        // items router defines DELETE /items/{item_id}
+        const response = await fetch(`/items/${itemId}`, { method: 'DELETE' });
         if (response.ok) {
           location.reload();
+        } else {
+          const txt = await response.text();
+          alert('Failed to delete item: ' + response.status + ' ' + txt);
         }
       } catch (error) {
         alert('Error deleting item: ' + error);
@@ -416,7 +428,8 @@
     // Load users
     async function loadUsers() {
       try {
-        const response = await fetch('/get-users');
+        // admin router exposes users at /users
+        const response = await fetch('/users');
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
