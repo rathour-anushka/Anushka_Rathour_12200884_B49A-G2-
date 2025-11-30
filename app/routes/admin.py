@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Form
 import sqlite3
 from ..database import get_connection
 
-router = APIRouter(prefix="/api/admin", tags=["Admin"])
+router = APIRouter(tags=["Admin"])
 
 
 # ============ USER MANAGEMENT ============

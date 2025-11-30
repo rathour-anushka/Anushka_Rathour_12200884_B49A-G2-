@@ -72,11 +72,7 @@ async def login(
             {"request": request, "error": "Invalid credentials"},
         )
     if role == "admin":
-        items = conn.execute("SELECT id, title, description, category, location, phone, image_path, status FROM items ORDER BY id DESC").fetchall()
-        items = [dict(item) for item in items]
-        return templates.TemplateResponse(
-            "admin_dashboard.html", {"request": request, "items": items}
-        )
+        return RedirectResponse(url="/admin-dashboard", status_code=303)
     # Student view: load items for index.html
     items = conn.execute(
         "SELECT id, title, description, category, location, phone, image_path FROM items ORDER BY id DESC"
@@ -94,7 +90,7 @@ async def report_page(request: Request, conn: sqlite3.Connection = Depends(get_d
     ).fetchall()
     return templates.TemplateResponse(
         "index.html",
-        {"request": request, "student_id": "Student", "items": items},
+        {"request": request, "student_id": "student", "items": items},
     )
 
 @app.get("/logout", response_class=HTMLResponse)
@@ -195,80 +191,10 @@ async def forgot_password(
 @app.get("/admin-dashboard", response_class=HTMLResponse)
 async def admin_dashboard(request: Request, conn: sqlite3.Connection = Depends(get_db)):
     items = conn.execute("SELECT id, title, description, category, location, phone, image_path, status FROM items ORDER BY id DESC").fetchall()
-    items = [dict(item) for item in items]
+    items = []
+    for item in conn.execute("SELECT id, title, description, category, location, phone, image_path, status FROM items ORDER BY id DESC").fetchall():
+        item_dict = dict(item)
+        if item_dict["image_path"]:
+            item_dict["image_path"] = f"/uploads/{item_dict['image_path']}"
+        items.append(item_dict)
     return templates.TemplateResponse("admin_dashboard.html", {"request": request, "items": items})
-
-@app.get("/get-users")
-async def get_all_users(conn: sqlite3.Connection = Depends(get_db)):
-    """API endpoint to fetch all users for the dashboard."""
-    try:
-        cursor = conn.execute("SELECT id, student_id, role FROM users ORDER BY student_id")
-        users = [
-            {"id": row[0], "student_id": row[1], "role": row[2]}
-            for row in cursor.fetchall()
-        ]
-        return users
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching users: {str(e)}")
-
-@app.post("/add-user")
-async def add_user_endpoint(
-    student_id: str = Form(...),
-    passcode: str = Form(...),
-    role: str = Form(...),
-    conn: sqlite3.Connection = Depends(get_db),
-):
-    """Add a new user."""
-    if role not in ["student", "admin"]:
-        raise HTTPException(status_code=400, detail="Invalid role")
-
-    try:
-        conn.execute(
-            "INSERT INTO users (student_id, passcode, role) VALUES (?, ?, ?)",
-            (student_id, passcode, role),
-        )
-        conn.commit()
-        return {"message": "User added successfully", "student_id": student_id}
-    except sqlite3.IntegrityError:
-        raise HTTPException(status_code=400, detail="Student ID already exists")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error adding user: {str(e)}")
-
-@app.delete("/delete-user/{user_id}")
-async def delete_user_endpoint(
-    user_id: int,
-    conn: sqlite3.Connection = Depends(get_db),
-):
-    """Delete a user by ID."""
-    try:
-        cursor = conn.execute("SELECT id FROM users WHERE id = ?", (user_id,))
-        if not cursor.fetchone():
-            raise HTTPException(status_code=404, detail="User not found")
-
-        conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
-        conn.commit()
-        return {"message": "User deleted successfully"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error deleting user: {str(e)}")
-
-@app.post("/update-item-status/{item_id}")
-async def update_item_status_endpoint(
-    item_id: int,
-    status: str = Form(...),
-    conn: sqlite3.Connection = Depends(get_db),
-):
-    """Update the status of an item."""
-    valid_statuses = ["Yet to be found", "Lost", "Found", "Resolved"]
-    if status not in valid_statuses:
-        raise HTTPException(status_code=400, detail="Invalid status")
-
-    try:
-        cursor = conn.execute("SELECT id FROM items WHERE id = ?", (item_id,))
-        if not cursor.fetchone():
-            raise HTTPException(status_code=404, detail="Item not found")
-
-        conn.execute("UPDATE items SET status = ? WHERE id = ?", (status, item_id))
-        conn.commit()
-        return {"message": f"Item status updated to {status}"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error updating status: {str(e)}")

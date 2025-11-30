@@ -28,5 +28,6 @@ def save_image(image: UploadFile) -> tuple[str, io.BytesIO]:
     with open(save_path, "rb") as img_file:
         image_data = io.BytesIO(img_file.read())
 
-    return str(save_path).replace("\\", "/"), image_data
+    # Return only filename (not full path) for storage in database
+    return filename, image_data
 

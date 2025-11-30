@@ -317,14 +317,16 @@
         return;
       }
       items.forEach(item => {
-        const statusClass = item.status === 'Resolved' ? 'status-resolved' : 
-                           item.status === 'Lost' ? 'status-lost' :
-                           item.status === 'Found' ? 'status-found' : 'status-pending';
+        const itemStatus = item.status || 'Yet to be found';
+        const statusClass = itemStatus === 'Resolved' ? 'status-resolved' : 
+                           itemStatus === 'Lost' ? 'status-lost' :
+                           itemStatus === 'Found' ? 'status-found' : 'status-pending';
+        const imageSrc = item.image_path ? `/uploads/${item.image_path}` : '';
         container.innerHTML += `
           <div class="bg-white p-4 rounded shadow-md hover:shadow-lg transition">
             <div class="flex justify-between items-start mb-2">
               <h3 class="text-lg font-bold text-gray-800">${item.title}</h3>
-              <span class="status-badge ${statusClass}">${item.status}</span>
+              <span class="status-badge ${statusClass}">${itemStatus}</span>
             </div>
             <p class="text-gray-600 text-sm mb-2">${item.description}</p>
             <div class="text-sm mb-3">
@@ -332,7 +334,7 @@
               <p><strong>Location:</strong> ${item.location}</p>
               <p><strong>Phone:</strong> ${item.phone}</p>
             </div>
-            ${item.image_path ? `<img src="/uploads/${item.image_path}" class="mt-2 rounded w-full h-40 object-cover mb-3">` : ''}
+            ${imageSrc ? `<img src="${imageSrc}" alt="${item.title}" class="mt-2 rounded w-full h-40 object-cover mb-3" onerror="this.src='/static/placeholder.png'">` : ''}
             <div class="flex gap-2 flex-wrap">
               <button onclick="editItem(${item.id})" class="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 transition">
                 <i class="fas fa-edit"></i> Edit
@@ -511,10 +513,15 @@
 
     // Update statistics
     function updateStatistics() {
+      if (!allItems || allItems.length === 0) {
+        console.warn('No items available for statistics');
+      }
       const total = allItems.length;
-      const lost = allItems.filter(i => i.status === 'Lost').length;
-      const found = allItems.filter(i => i.status === 'Found').length;
+      const lost = allItems.filter(i => i.status === 'Lost' || i.category === 'Lost').length;
+      const found = allItems.filter(i => i.status === 'Found' || i.category === 'Found').length;
       const resolved = allItems.filter(i => i.status === 'Resolved').length;
+      
+      console.log('Statistics:', { total, lost, found, resolved });
       
       document.getElementById('stat-total').textContent = total;
       document.getElementById('stat-lost').textContent = lost;
