@@ -60,18 +60,32 @@ async def list_items():
     finally:
         conn.close()
 
-    return [
-        {
-            "id": r[0],
-            "title": r[1],
-            "description": r[2],
-            "category": r[3],
-            "location": r[4],
-            "phone": r[5],
-            "image_path": r[6],
-        }
-        for r in rows
-    ]
+    # Normalize image paths so frontend can use them directly.
+    result = []
+    for r in rows:
+        image_path = r[6]
+        if image_path:
+            # Ensure stored filename becomes a URL under /uploads
+            if str(image_path).startswith("/uploads/"):
+                image_url = image_path
+            else:
+                image_url = f"/uploads/{image_path}"
+        else:
+            image_url = None
+
+        result.append(
+            {
+                "id": r[0],
+                "title": r[1],
+                "description": r[2],
+                "category": r[3],
+                "location": r[4],
+                "phone": r[5],
+                "image_path": image_url,
+            }
+        )
+
+    return result
 
 @router.delete("/items/{item_id}")
 async def delete_item(item_id: int):
