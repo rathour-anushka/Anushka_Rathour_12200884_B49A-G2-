@@ -2,72 +2,527 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Admin Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard - Lost & Found</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <style>
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    .tab-btn.active {
+      @apply bg-blue-600 text-white;
+    }
+    .tab-btn {
+      @apply px-4 py-2 rounded-l text-gray-700 hover:bg-blue-500 hover:text-white transition;
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 50;
+    }
+    .modal.show {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-content {
+      @apply bg-white p-6 rounded-lg shadow-lg max-w-2xl w-full max-h-96 overflow-y-auto;
+    }
+    .status-badge {
+      @apply px-3 py-1 rounded-full text-sm font-semibold;
+    }
+    .status-resolved {
+      @apply bg-green-200 text-green-800;
+    }
+    .status-pending {
+      @apply bg-yellow-200 text-yellow-800;
+    }
+    .status-lost {
+      @apply bg-red-200 text-red-800;
+    }
+    .status-found {
+      @apply bg-blue-200 text-blue-800;
+    }
+  </style>
 </head>
-<body class="bg-gray-100 p-6">
-  <h1 class="text-3xl font-bold mb-6">Admin Dashboard</h1>
-  <div class="flex justify-end mb-4">
-  <a href="/logout" class="text-sm text-red-600 hover:underline">Logout</a>
-</div>
-
-  <div class="mb-4 flex space-x-4">
-    <button onclick="filterItems('All')" class="px-4 py-2 bg-gray-300 rounded">All</button>
-    <button onclick="filterItems('Lost')" class="px-4 py-2 bg-red-500 text-white rounded">Lost</button>
-    <button onclick="filterItems('Found')" class="px-4 py-2 bg-green-500 text-white rounded">Found</button>
-    <button onclick="filterItems('Resolved')" class="px-4 py-2 bg-blue-500 text-white rounded">Resolved</button>
-    <button onclick="filterItems('Yet to be found')" class="px-4 py-2 bg-yellow-500 text-white rounded">Yet to be found</button>
+<body class="bg-gray-100">
+  <!-- Header -->
+  <div class="bg-blue-600 text-white p-4 shadow-md">
+    <div class="max-w-7xl mx-auto flex justify-between items-center">
+      <h1 class="text-3xl font-bold"><i class="fas fa-cog"></i> Admin Dashboard</h1>
+      <a href="/logout" class="bg-red-500 hover:bg-red-700 px-4 py-2 rounded transition">Logout</a>
+    </div>
   </div>
 
-  <script id="items-data" type="application/json">
-    {{ items | tojson }}
-  </script>
+  <div class="max-w-7xl mx-auto p-6">
+    <!-- Tab Navigation -->
+    <div class="flex border-b bg-white rounded-t-lg shadow-md mb-6">
+      <button onclick="switchTab('requests')" class="tab-btn active bg-blue-600 text-white" id="tab-requests">
+        <i class="fas fa-list"></i> Manage Requests
+      </button>
+      <button onclick="switchTab('users')" class="tab-btn" id="tab-users">
+        <i class="fas fa-users"></i> Manage Users
+      </button>
+      <button onclick="switchTab('add-item')" class="tab-btn" id="tab-add-item">
+        <i class="fas fa-plus-circle"></i> Add Item
+      </button>
+      <button onclick="switchTab('add-user')" class="tab-btn" id="tab-add-user">
+        <i class="fas fa-user-plus"></i> Add User
+      </button>
+      <button onclick="switchTab('stats')" class="tab-btn" id="tab-stats">
+        <i class="fas fa-chart-bar"></i> Statistics
+      </button>
+    </div>
 
-  <div id="adminItems" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+    <!-- ===== REQUESTS TAB ===== -->
+    <div id="requests" class="tab-content active">
+      <div class="bg-white p-6 rounded-b-lg shadow-md">
+        <h2 class="text-2xl font-bold mb-4">Manage Requests & Items</h2>
+        
+        <div class="mb-4 flex flex-wrap gap-2">
+          <button onclick="filterItems('All')" class="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 transition">All</button>
+          <button onclick="filterItems('Lost')" class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition">Lost</button>
+          <button onclick="filterItems('Found')" class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition">Found</button>
+          <button onclick="filterItems('Resolved')" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition">Resolved</button>
+          <button onclick="filterItems('Yet to be found')" class="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600 transition">Pending</button>
+        </div>
+
+        <script id="items-data" type="application/json">
+          {{ items | tojson }}
+        </script>
+
+        <div id="adminItems" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+      </div>
+    </div>
+
+    <!-- ===== USERS TAB ===== -->
+    <div id="users" class="tab-content">
+      <div class="bg-white p-6 rounded-b-lg shadow-md">
+        <h2 class="text-2xl font-bold mb-4">Manage Users</h2>
+        <div id="usersList" class="overflow-x-auto">
+          <table class="w-full border-collapse">
+            <thead>
+              <tr class="bg-gray-200">
+                <th class="border p-2 text-left">Student ID</th>
+                <th class="border p-2 text-left">Role</th>
+                <th class="border p-2 text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="usersTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== ADD ITEM TAB ===== -->
+    <div id="add-item" class="tab-content">
+      <div class="bg-white p-6 rounded-b-lg shadow-md">
+        <h2 class="text-2xl font-bold mb-4">Add New Item</h2>
+        <form id="addItemForm" enctype="multipart/form-data" class="space-y-4 max-w-lg">
+          <div>
+            <label class="block font-bold mb-1">Title</label>
+            <input type="text" name="title" required class="w-full border p-2 rounded">
+          </div>
+          <div>
+            <label class="block font-bold mb-1">Description</label>
+            <textarea name="description" required class="w-full border p-2 rounded h-24"></textarea>
+          </div>
+          <div>
+            <label class="block font-bold mb-1">Category</label>
+            <select name="category" required class="w-full border p-2 rounded">
+              <option>Electronics</option>
+              <option>Books</option>
+              <option>Accessories</option>
+              <option>Documents</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-bold mb-1">Location</label>
+            <input type="text" name="location" required class="w-full border p-2 rounded">
+          </div>
+          <div>
+            <label class="block font-bold mb-1">Phone</label>
+            <input type="tel" name="phone" required class="w-full border p-2 rounded">
+          </div>
+          <div>
+            <label class="block font-bold mb-1">Image</label>
+            <input type="file" name="image" accept="image/*" class="w-full border p-2 rounded">
+          </div>
+          <button type="submit" class="px-6 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition">Add Item</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- ===== ADD USER TAB ===== -->
+    <div id="add-user" class="tab-content">
+      <div class="bg-white p-6 rounded-b-lg shadow-md">
+        <h2 class="text-2xl font-bold mb-4">Add New User</h2>
+        <form id="addUserForm" class="space-y-4 max-w-lg">
+          <div>
+            <label class="block font-bold mb-1">Student ID</label>
+            <input type="text" name="student_id" required class="w-full border p-2 rounded">
+          </div>
+          <div>
+            <label class="block font-bold mb-1">Passcode</label>
+            <input type="password" name="passcode" required class="w-full border p-2 rounded">
+          </div>
+          <div>
+            <label class="block font-bold mb-1">Role</label>
+            <select name="role" required class="w-full border p-2 rounded">
+              <option value="student">Student</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+          <button type="submit" class="px-6 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition">Add User</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- ===== STATISTICS TAB ===== -->
+    <div id="stats" class="tab-content">
+      <div class="bg-white p-6 rounded-b-lg shadow-md">
+        <h2 class="text-2xl font-bold mb-4">Statistics</h2>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div class="bg-blue-500 text-white p-6 rounded text-center">
+            <h3 class="text-3xl font-bold" id="stat-total">0</h3>
+            <p class="text-sm">Total Items</p>
+          </div>
+          <div class="bg-red-500 text-white p-6 rounded text-center">
+            <h3 class="text-3xl font-bold" id="stat-lost">0</h3>
+            <p class="text-sm">Lost Items</p>
+          </div>
+          <div class="bg-green-500 text-white p-6 rounded text-center">
+            <h3 class="text-3xl font-bold" id="stat-found">0</h3>
+            <p class="text-sm">Found Items</p>
+          </div>
+          <div class="bg-purple-500 text-white p-6 rounded text-center">
+            <h3 class="text-3xl font-bold" id="stat-resolved">0</h3>
+            <p class="text-sm">Resolved</p>
+          </div>
+        </div>
+        <div class="mt-6 p-4 bg-gray-100 rounded">
+          <h3 class="font-bold mb-2">Total Users: <span id="stat-users">0</span></h3>
+          <h3 class="font-bold">Total Admins: <span id="stat-admins">0</span></h3>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Item Modal -->
+  <div id="editItemModal" class="modal">
+    <div class="modal-content">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-2xl font-bold">Edit Item</h2>
+        <button onclick="closeModal('editItemModal')" class="text-2xl">&times;</button>
+      </div>
+      <form id="editItemForm" enctype="multipart/form-data" class="space-y-3">
+        <input type="hidden" id="editItemId" name="item_id">
+        <div>
+          <label class="block font-bold">Title</label>
+          <input type="text" id="editTitle" name="title" required class="w-full border p-2 rounded">
+        </div>
+        <div>
+          <label class="block font-bold">Description</label>
+          <textarea id="editDescription" name="description" required class="w-full border p-2 rounded h-20"></textarea>
+        </div>
+        <div>
+          <label class="block font-bold">Category</label>
+          <select id="editCategory" name="category" required class="w-full border p-2 rounded">
+            <option>Electronics</option>
+            <option>Books</option>
+            <option>Accessories</option>
+            <option>Documents</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div>
+          <label class="block font-bold">Status</label>
+          <select id="editStatus" name="status" class="w-full border p-2 rounded">
+            <option>Yet to be found</option>
+            <option>Lost</option>
+            <option>Found</option>
+            <option>Resolved</option>
+          </select>
+        </div>
+        <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Save Changes</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Delete User Modal -->
+  <div id="deleteUserModal" class="modal">
+    <div class="modal-content">
+      <h2 class="text-xl font-bold mb-4">Confirm Delete</h2>
+      <p class="mb-4">Are you sure you want to delete this user?</p>
+      <div class="flex justify-end space-x-2">
+        <button onclick="closeModal('deleteUserModal')" class="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400">Cancel</button>
+        <button onclick="confirmDeleteUser()" class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">Delete</button>
+      </div>
+    </div>
+  </div>
 
   <script>
-    const allItems = JSON.parse(document.getElementById('items-data').textContent);
+    let allItems = [];
+    let allUsers = [];
+    let deleteUserId = null;
 
-    function render(items) {
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', async () => {
+      allItems = JSON.parse(document.getElementById('items-data').textContent);
+      await loadUsers();
+      renderItems(allItems);
+      updateStatistics();
+    });
+
+    // Tab switching
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active', 'bg-blue-600', 'text-white'));
+      
+      document.getElementById(tabName).classList.add('active');
+      document.getElementById('tab-' + tabName).classList.add('active', 'bg-blue-600', 'text-white');
+    }
+
+    // Filter items
+    function filterItems(type) {
+      if (type === 'All') {
+        renderItems(allItems);
+      } else {
+        const filtered = allItems.filter(i => i.category === type || i.status === type);
+        renderItems(filtered);
+      }
+    }
+
+    // Render items
+    function renderItems(items) {
       const container = document.getElementById('adminItems');
       container.innerHTML = '';
-      items.forEach(i => {
+      if (items.length === 0) {
+        container.innerHTML = '<p class="col-span-3 text-center text-gray-500">No items found</p>';
+        return;
+      }
+      items.forEach(item => {
+        const statusClass = item.status === 'Resolved' ? 'status-resolved' : 
+                           item.status === 'Lost' ? 'status-lost' :
+                           item.status === 'Found' ? 'status-found' : 'status-pending';
         container.innerHTML += `
-          <div class="bg-white p-4 rounded shadow">
-            <h2 class="text-lg font-bold">${i.title}</h2>
-            <p>${i.description}</p>
-            <p><strong>Category:</strong> ${i.category}</p>
-            <p><strong>Status:</strong> ${i.status}</p>
-            <p><strong>Location:</strong> ${i.location}</p>
-            <p><strong>Phone:</strong> ${i.phone}</p>
-            ${i.image_path ? `<img src="/uploads/${i.image_path}" class="mt-2 rounded w-full">` : ''}
-            <div class="mt-3 flex space-x-2">
-              <button onclick="markResolved(${i.id})" class="px-3 py-1 bg-blue-500 text-white rounded">Mark Resolved</button>
-              <button onclick="deleteItem(${i.id})" class="px-3 py-1 bg-red-500 text-white rounded">Delete</button>
+          <div class="bg-white p-4 rounded shadow-md hover:shadow-lg transition">
+            <div class="flex justify-between items-start mb-2">
+              <h3 class="text-lg font-bold text-gray-800">${item.title}</h3>
+              <span class="status-badge ${statusClass}">${item.status}</span>
+            </div>
+            <p class="text-gray-600 text-sm mb-2">${item.description}</p>
+            <div class="text-sm mb-3">
+              <p><strong>Category:</strong> ${item.category}</p>
+              <p><strong>Location:</strong> ${item.location}</p>
+              <p><strong>Phone:</strong> ${item.phone}</p>
+            </div>
+            ${item.image_path ? `<img src="/uploads/${item.image_path}" class="mt-2 rounded w-full h-40 object-cover mb-3">` : ''}
+            <div class="flex gap-2 flex-wrap">
+              <button onclick="editItem(${item.id})" class="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 transition">
+                <i class="fas fa-edit"></i> Edit
+              </button>
+              <button onclick="deleteItem(${item.id})" class="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600 transition">
+                <i class="fas fa-trash"></i> Delete
+              </button>
+              <button onclick="markStatus(${item.id}, 'Resolved')" class="px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600 transition">
+                <i class="fas fa-check"></i> Mark Resolved
+              </button>
             </div>
           </div>
         `;
       });
     }
 
-    function filterItems(type) {
-      if (type === 'All') return render(allItems);
-      render(allItems.filter(i => i.category === type || i.status === type));
+    // Edit item
+    async function editItem(itemId) {
+      const item = allItems.find(i => i.id === itemId);
+      if (!item) return;
+      
+      document.getElementById('editItemId').value = itemId;
+      document.getElementById('editTitle').value = item.title;
+      document.getElementById('editDescription').value = item.description;
+      document.getElementById('editCategory').value = item.category;
+      document.getElementById('editStatus').value = item.status;
+      
+      document.getElementById('editItemModal').classList.add('show');
     }
 
-    async function markResolved(id) {
-      await fetch(`/mark-resolved/${id}`, { method: 'POST' });
-      location.reload();
-    }
+    // Submit edit form
+    document.getElementById('editItemForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(e.target);
+      const itemId = formData.get('item_id');
+      
+      try {
+        const response = await fetch(`/update-item/${itemId}`, {
+          method: 'POST',
+          body: formData
+        });
+        if (response.ok) {
+          location.reload();
+        }
+      } catch (error) {
+        alert('Error updating item: ' + error);
+      }
+    });
 
-    async function deleteItem(id) {
-      if (confirm('Delete this item?')) {
-        await fetch(`/delete-item/${id}`, { method: 'DELETE' });
-        location.reload();
+    // Delete item
+    async function deleteItem(itemId) {
+      if (!confirm('Delete this item permanently?')) return;
+      try {
+        const response = await fetch(`/delete-item/${itemId}`, { method: 'DELETE' });
+        if (response.ok) {
+          location.reload();
+        }
+      } catch (error) {
+        alert('Error deleting item: ' + error);
       }
     }
 
-    render(allItems);
+    // Mark item status
+    async function markStatus(itemId, status) {
+      try {
+        const response = await fetch(`/update-item-status/${itemId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status })
+        });
+        if (response.ok) {
+          location.reload();
+        }
+      } catch (error) {
+        alert('Error updating status: ' + error);
+      }
+    }
+
+    // Load users
+    async function loadUsers() {
+      try {
+        const response = await fetch('/get-users');
+        if (response.ok) {
+          allUsers = await response.json();
+          renderUsers();
+        }
+      } catch (error) {
+        console.error('Error loading users:', error);
+      }
+    }
+
+    // Render users table
+    function renderUsers() {
+      const tbody = document.getElementById('usersTableBody');
+      tbody.innerHTML = '';
+      allUsers.forEach(user => {
+        tbody.innerHTML += `
+          <tr class="border-b hover:bg-gray-50">
+            <td class="border p-2">${user.student_id}</td>
+            <td class="border p-2"><span class="px-3 py-1 rounded text-sm font-bold ${user.role === 'admin' ? 'bg-red-200 text-red-800' : 'bg-blue-200 text-blue-800'}">${user.role.toUpperCase()}</span></td>
+            <td class="border p-2 text-center">
+              <button onclick="showDeleteUserModal(${user.id})" class="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600 transition">
+                <i class="fas fa-trash"></i> Delete
+              </button>
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    // Delete user modal
+    function showDeleteUserModal(userId) {
+      deleteUserId = userId;
+      document.getElementById('deleteUserModal').classList.add('show');
+    }
+
+    async function confirmDeleteUser() {
+      if (!deleteUserId) return;
+      try {
+        const response = await fetch(`/delete-user/${deleteUserId}`, { method: 'DELETE' });
+        if (response.ok) {
+          closeModal('deleteUserModal');
+          location.reload();
+        }
+      } catch (error) {
+        alert('Error deleting user: ' + error);
+      }
+    }
+
+    // Add item form submission
+    document.getElementById('addItemForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(e.target);
+      try {
+        const response = await fetch('/add-item', {
+          method: 'POST',
+          body: formData
+        });
+        if (response.ok) {
+          alert('Item added successfully!');
+          e.target.reset();
+          location.reload();
+        }
+      } catch (error) {
+        alert('Error adding item: ' + error);
+      }
+    });
+
+    // Add user form submission
+    document.getElementById('addUserForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(e.target);
+      try {
+        const response = await fetch('/add-user', {
+          method: 'POST',
+          body: formData
+        });
+        if (response.ok) {
+          alert('User added successfully!');
+          e.target.reset();
+          location.reload();
+        }
+      } catch (error) {
+        alert('Error adding user: ' + error);
+      }
+    });
+
+    // Modal functions
+    function closeModal(modalId) {
+      document.getElementById(modalId).classList.remove('show');
+    }
+
+    // Update statistics
+    function updateStatistics() {
+      const total = allItems.length;
+      const lost = allItems.filter(i => i.status === 'Lost').length;
+      const found = allItems.filter(i => i.status === 'Found').length;
+      const resolved = allItems.filter(i => i.status === 'Resolved').length;
+      
+      document.getElementById('stat-total').textContent = total;
+      document.getElementById('stat-lost').textContent = lost;
+      document.getElementById('stat-found').textContent = found;
+      document.getElementById('stat-resolved').textContent = resolved;
+      document.getElementById('stat-users').textContent = allUsers.filter(u => u.role === 'student').length;
+      document.getElementById('stat-admins').textContent = allUsers.filter(u => u.role === 'admin').length;
+    }
+
+    // Close modal on outside click
+    document.querySelectorAll('.modal').forEach(modal => {
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          modal.classList.remove('show');
+        }
+      });
+    });
   </script>
 </body>
 </html>
