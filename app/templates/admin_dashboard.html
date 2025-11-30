@@ -278,10 +278,15 @@
 
     // Initialize on page load
     document.addEventListener('DOMContentLoaded', async () => {
-      allItems = JSON.parse(document.getElementById('items-data').textContent);
-      await loadUsers();
-      renderItems(allItems);
-      updateStatistics();
+      try {
+        allItems = JSON.parse(document.getElementById('items-data').textContent);
+        await loadUsers();
+        renderItems(allItems);
+        updateStatistics();
+      } catch (error) {
+        console.error('Initialization error:', error);
+        alert('Error initializing dashboard: ' + error.message);
+      }
     });
 
     // Tab switching
@@ -410,12 +415,16 @@
     async function loadUsers() {
       try {
         const response = await fetch('/get-users');
-        if (response.ok) {
-          allUsers = await response.json();
-          renderUsers();
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
+        const data = await response.json();
+        allUsers = Array.isArray(data) ? data : [];
+        renderUsers();
       } catch (error) {
         console.error('Error loading users:', error);
+        allUsers = [];
+        renderUsers();
       }
     }
 

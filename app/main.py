@@ -72,7 +72,8 @@ async def login(
             {"request": request, "error": "Invalid credentials"},
         )
     if role == "admin":
-        items = conn.execute("SELECT id, title FROM items").fetchall()
+        items = conn.execute("SELECT id, title, description, category, location, phone, image_path, status FROM items ORDER BY id DESC").fetchall()
+        items = [dict(item) for item in items]
         return templates.TemplateResponse(
             "admin_dashboard.html", {"request": request, "items": items}
         )
@@ -126,16 +127,75 @@ async def change_password(
     )
     conn.commit()
     return templates.TemplateResponse(
-        "login.html",
+        "change_password.html",
         {
             "request": request,
-            "message": "Password updated. Please log in again.",
+            "message": "Password updated successfully. Please log in again.",
         },
     )
+
+@app.get("/forgot-password", response_class=HTMLResponse)
+async def forgot_password_form(request: Request):
+    """Display forgot password form."""
+    return templates.TemplateResponse("forgot_password.html", {"request": request})
+
+@app.post("/forgot-password", response_class=HTMLResponse)
+async def forgot_password(
+    request: Request,
+    student_id: str = Form(...),
+    new_passcode: str = Form(...),
+    confirm_passcode: str = Form(...),
+    conn: sqlite3.Connection = Depends(get_db),
+):
+    """Reset password for user who forgot it."""
+    # Check if passcodes match
+    if new_passcode != confirm_passcode:
+        return templates.TemplateResponse(
+            "forgot_password.html",
+            {"request": request, "error": "Passcodes do not match"},
+        )
+    
+    # Check if student ID exists
+    user = conn.execute(
+        "SELECT id FROM users WHERE student_id = ?", (student_id,)
+    ).fetchone()
+    if not user:
+        return templates.TemplateResponse(
+            "forgot_password.html",
+            {"request": request, "error": "Student ID not found in system"},
+        )
+    
+    # Check passcode length
+    if len(new_passcode) < 3:
+        return templates.TemplateResponse(
+            "forgot_password.html",
+            {"request": request, "error": "Passcode must be at least 3 characters"},
+        )
+    
+    # Update passcode
+    try:
+        conn.execute(
+            "UPDATE users SET passcode = ? WHERE student_id = ?",
+            (new_passcode, student_id),
+        )
+        conn.commit()
+        return templates.TemplateResponse(
+            "forgot_password.html",
+            {
+                "request": request,
+                "success": "Passcode reset successfully! Please log in with your new passcode.",
+            },
+        )
+    except Exception as e:
+        return templates.TemplateResponse(
+            "forgot_password.html",
+            {"request": request, "error": f"An error occurred: {str(e)}"},
+        )
 
 @app.get("/admin-dashboard", response_class=HTMLResponse)
 async def admin_dashboard(request: Request, conn: sqlite3.Connection = Depends(get_db)):
     items = conn.execute("SELECT id, title, description, category, location, phone, image_path, status FROM items ORDER BY id DESC").fetchall()
+    items = [dict(item) for item in items]
     return templates.TemplateResponse("admin_dashboard.html", {"request": request, "items": items})
 
 @app.get("/get-users")
