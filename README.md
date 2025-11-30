@@ -24,5 +24,5 @@ A FastAPI-powered web application that helps students and staff find lost items 
 
 ---
 
-## 📁 Project Structure
+
 
